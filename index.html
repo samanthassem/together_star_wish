@@ -751,7 +751,7 @@ function switchTab(btn, tabId) {
 //  TOPICS
 // ══════════════════════════════════════════
 async function loadTopics() {
-  const { data } = await sb.from('topics').select('*').order('created_at', { ascending: false });
+  const { data } = await sb.from('topics').select('*').order('date', { ascending: false });
   const sel = document.getElementById('topic-select');
   sel.innerHTML = '<option value="">-- 학습 문제를 선택하세요 --</option>';
   (data || []).forEach(t => {
@@ -1021,13 +1021,19 @@ async function loadMyRecord() {
 
   const { data } = await sb.from('reflections')
     .select('*, topics(title, date)')
-    .eq('student_id', currentUser.id)
-    .order('created_at', { ascending: false });
+    .eq('student_id', currentUser.id);
 
   list.innerHTML = '';
   if (!data || data.length === 0) {
     list.innerHTML = '<div class="empty-state">아직 작성한 성찰 일지가 없어요.</div>'; return;
   }
+
+  // 학습날짜(topics.date) 기준 내림차순 정렬
+  data.sort((a, b) => {
+    const da = a.topics?.date || '';
+    const db = b.topics?.date || '';
+    return db.localeCompare(da);
+  });
 
   data.forEach(r => {
     const card = document.createElement('div');
