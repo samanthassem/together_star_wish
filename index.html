@@ -299,6 +299,7 @@
     <div style="margin-top:0.8rem;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">
       <button class="pub-tab" onclick="showPublicTab('pub-sky')">🌌 오늘의 하늘</button>
       <button class="pub-tab" onclick="showPublicTab('pub-collect')">📚 모아보기</button>
+      <button class="pub-tab" id="home-btn" style="display:none" onclick="goHome()">🏠 홈으로</button>
       <div id="user-badge-wrap" style="display:none">
         <span class="user-badge" onclick="logout()">
           <span id="badge-name">-</span>
@@ -322,7 +323,7 @@
         <div id="pub-sky-items" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:0.5rem"></div>
       </div>
     </div>
-    <div class="mt-md"><button class="btn btn-ghost" onclick="closePublicTab()">← 돌아가기</button></div>
+    <div class="mt-md"><button class="btn btn-ghost" onclick="goHome()">🏠 홈으로</button></div>
   </div>
 
   <!-- ══ PUBLIC COLLECT ══ -->
@@ -336,7 +337,7 @@
       </div>
     </div>
     <div class="mt-sm" id="pub-collect-result"></div>
-    <div class="mt-md"><button class="btn btn-ghost" onclick="closePublicTab()">← 돌아가기</button></div>
+    <div class="mt-md"><button class="btn btn-ghost" onclick="goHome()">🏠 홈으로</button></div>
   </div>
 
   <!-- ══ LOGIN SCREEN ══ -->
@@ -578,10 +579,18 @@ async function showPublicTab(tab) {
     showScreen('pub-collect');
     loadPubCollectTopics();
   }
+  // 홈 버튼 표시
+  document.getElementById('home-btn').style.display = 'inline-flex';
 }
 
-function closePublicTab() {
-  showScreen(prevScreen || 'login');
+function goHome() {
+  // 로그인 상태면 해당 화면으로, 아니면 로그인 화면으로
+  document.getElementById('home-btn').style.display = 'none';
+  if (currentUser) {
+    showScreen(currentUser.role === 'admin' ? 'admin' : 'student');
+  } else {
+    showScreen('login');
+  }
 }
 
 async function loadPubSkyView() {
