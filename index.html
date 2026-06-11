@@ -853,11 +853,14 @@ function switchCollect(btn, id) {
   btn.parentElement.querySelectorAll('.c-tab').forEach(t => {
     t.classList.remove('active','blue','yellow','pink');
   });
+  const base = id.replace(/^pc/, 'c'); // pc1→c1, pc2→c2 등 정규화
   const colors = { c1: 'blue', c2: 'yellow', c3: 'pink' };
-  btn.classList.add('active', colors[id]);
-  ['c1','c2','c3'].forEach(cid => {
-    const el = document.getElementById(cid);
-    if (el) el.style.display = cid === id ? 'block' : 'none';
+  btn.classList.add('active', colors[base]);
+  // 같은 부모 안에서만 탭 전환 (pc1/pc2/pc3 또는 c1/c2/c3)
+  const prefix = id.startsWith('pc') ? 'pc' : 'c';
+  ['1','2','3'].forEach(n => {
+    const el = document.getElementById(prefix + n);
+    if (el) el.style.display = (prefix + n) === id ? 'block' : 'none';
   });
 }
 
