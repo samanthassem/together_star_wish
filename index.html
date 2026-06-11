@@ -217,6 +217,17 @@
   .text-muted { color: var(--text-muted); font-size: 0.85rem; }
   .empty-state { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.9rem; }
 
+  /* ── DATE CHIPS ── */
+  .date-chip {
+    padding: 4px 12px; border-radius: 999px; font-size: 0.78rem;
+    border: 1px solid var(--card-border); background: var(--card-bg);
+    color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+  }
+  .date-chip:hover, .date-chip.active {
+    background: rgba(78,205,196,0.2); color: var(--accent-teal);
+    border-color: var(--accent-teal);
+  }
+
   /* ── MY RECORD ── */
   .record-card {
     background: var(--card-bg); border: 1px solid var(--card-border);
@@ -313,9 +324,10 @@
   <div id="screen-pub-sky" class="screen">
     <div class="card">
       <div class="reflect-section">
-        <label>날짜 선택</label>
+        <label>날짜 선택 <span style="color:var(--text-muted);font-size:0.78rem">(학습 날짜 기준)</span></label>
         <input type="date" id="pub-sky-date">
       </div>
+      <div id="pub-sky-date-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:0.8rem"></div>
     </div>
     <div class="mt-sm">
       <div id="pub-sky-canvas-wrap" style="background:linear-gradient(180deg,#050d1f 0%,#0f1f4a 50%,#1a3580 100%);border-radius:16px;padding:1.5rem;min-height:220px;position:relative;overflow:hidden">
@@ -404,9 +416,10 @@
     <div id="tab-sky" class="tab-content" style="display:none">
       <div class="card">
         <div class="reflect-section">
-          <label>날짜 선택</label>
+          <label>날짜 선택 <span style="color:var(--text-muted);font-size:0.78rem">(학습 날짜 기준)</span></label>
           <input type="date" id="sky-date">
         </div>
+        <div id="sky-date-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:0.8rem"></div>
       </div>
       <div class="mt-sm">
         <div id="sky-canvas-wrap">
@@ -575,6 +588,7 @@ async function showPublicTab(tab) {
     document.getElementById('pub-sky-date').value = today;
     showScreen('pub-sky');
     loadPubSkyView();
+    loadSkyDateChips('pub-sky-date', 'pub-sky-date-chips');
   } else {
     showScreen('pub-collect');
     loadPubCollectTopics();
@@ -596,7 +610,9 @@ function goHome() {
 async function loadPubSkyView() {
   const date = document.getElementById('pub-sky-date').value;
   document.getElementById('pub-sky-date-label').textContent = `${date} 하늘 ✨`;
-  const { data } = await sb.from('reflections').select('*, students(name)').eq('date', date);
+  const { data } = await sb.from('reflections')
+    .select('*, students(name), topics!inner(date)')
+    .eq('topics.date', date);
   const container = document.getElementById('pub-sky-items');
   container.innerHTML = '';
   if (!data || data.length === 0) {
@@ -741,7 +757,7 @@ function switchTab(btn, tabId) {
   parent.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
   document.getElementById('tab-' + tabId).style.display = 'block';
 
-  if (tabId === 'sky') loadSkyView();
+  if (tabId === 'sky') { loadSkyView(); loadSkyDateChips('sky-date', 'sky-date-chips'); }
   if (tabId === 'collect') loadCollectTopics();
   if (tabId === 'myrecord') loadMyRecord();
   if (tabId === 'a-entries') loadAdminTopicFilter();
@@ -865,12 +881,52 @@ async function submitReflection() {
 // ══════════════════════════════════════════
 //  SKY VIEW
 // ══════════════════════════════════════════
+async function loadSkyDateChips(inputId, chipsId) {
+  // 성찰 기록이 있는 학습날짜 목록 가져오기
+  const { data } = await sb.from('topics')
+    .select('date, reflections(id)')
+    .not('reflections', 'is', null)
+    .order('date', { ascending: false });
+
+  const chips = document.getElementById(chipsId);
+  if (!chips) return;
+  chips.innerHTML = '';
+
+  // 성찰이 1개 이상 있는 날짜만
+  const dates = [...new Set(
+    (data || []).filter(t => t.reflections && t.reflections.length > 0).map(t => t.date)
+  )].sort((a,b) => b.localeCompare(a));
+
+  if (dates.length === 0) return;
+
+  const label = document.createElement('span');
+  label.style.cssText = 'font-size:0.75rem;color:var(--text-muted);align-self:center;margin-right:4px';
+  label.textContent = '📅 기록 있는 날:';
+  chips.appendChild(label);
+
+  dates.forEach(d => {
+    const chip = document.createElement('button');
+    chip.className = 'date-chip';
+    chip.textContent = d;
+    chip.onclick = () => {
+      document.getElementById(inputId).value = d;
+      chips.querySelectorAll('.date-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      if (inputId === 'sky-date') loadSkyView();
+      else loadPubSkyView();
+    };
+    chips.appendChild(chip);
+  });
+}
+
 async function loadSkyView() {
   const date = document.getElementById('sky-date').value;
   document.getElementById('sky-date-label').textContent = `${date} 하늘 ✨`;
 
+  // topics.date 기준으로 해당 날짜의 성찰 조회
   const { data } = await sb.from('reflections')
-    .select('*, students(name)').eq('date', date);
+    .select('*, students(name), topics!inner(date)')
+    .eq('topics.date', date);
 
   const container = document.getElementById('sky-items');
   container.innerHTML = '';
@@ -882,21 +938,18 @@ async function loadSkyView() {
 
   data.forEach(r => {
     const name = r.students?.name || '학생';
-    // star1 (blue)
     const s1 = document.createElement('div');
     s1.className = 'sky-item';
     s1.innerHTML = `<span class="icon" style="color:var(--star-blue);animation-delay:${Math.random()*2}s">★</span><span class="name">${name}</span>`;
     s1.onclick = () => openModal(`${name} — 별 하나 (알게 된 점)`, [{ label: '알게 된 점', text: r.star1 }]);
     container.appendChild(s1);
 
-    // star2 (yellow)
     const s2 = document.createElement('div');
     s2.className = 'sky-item';
     s2.innerHTML = `<span class="icon" style="color:var(--star-yellow);animation-delay:${Math.random()*2}s">★</span><span class="name">${name}</span>`;
     s2.onclick = () => openModal(`${name} — 별 둘 (느낀 점)`, [{ label: '느낀 점', text: r.star2 }]);
     container.appendChild(s2);
 
-    // heart (pink)
     const h = document.createElement('div');
     h.className = 'sky-item';
     h.innerHTML = `<span class="icon" style="color:var(--heart-pink);animation-delay:${Math.random()*2}s">♥</span><span class="name">${name}</span>`;
