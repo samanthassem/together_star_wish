@@ -39,7 +39,7 @@
   @keyframes twinkle { from { opacity: 0.2; } to { opacity: 0.8; } }
 
   /* ── LAYOUT ── */
-  #app { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem; }
+  #app { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 1.5rem 2rem; }
 
   /* ── HEADER ── */
   header {
@@ -69,7 +69,7 @@
 
   /* ── BUTTONS ── */
   .btn {
-    display: inline-flex; align-items: center; gap: 6px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     padding: 10px 20px; border-radius: 10px; border: none;
     font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
   }
@@ -93,6 +93,14 @@
   select option { background: #1a2d5a; color: var(--text-light); }
   textarea { resize: vertical; min-height: 80px; }
   label { display: block; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 5px; font-weight: 500; }
+
+  /* ── PUBLIC TABS (header) ── */
+  .pub-tab {
+    padding: 6px 16px; border-radius: 999px; border: 1px solid var(--card-border);
+    background: var(--card-bg); color: var(--text-muted); font-size: 0.82rem;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .pub-tab:hover { background: rgba(255,255,255,0.12); color: var(--text-light); }
 
   /* ── SCREEN LOGIC ── */
   .screen { display: none; }
@@ -209,12 +217,68 @@
   .text-muted { color: var(--text-muted); font-size: 0.85rem; }
   .empty-state { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.9rem; }
 
+  /* ── MY RECORD ── */
+  .record-card {
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 16px; padding: 1.2rem; margin-bottom: 10px;
+    cursor: pointer; transition: transform 0.15s, border-color 0.15s;
+  }
+  .record-card:hover { transform: translateY(-2px); border-color: var(--accent-teal); }
+  .record-card .rc-date { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; }
+  .record-card .rc-topic { font-size: 0.95rem; font-weight: 700; margin-bottom: 10px; }
+  .record-card .rc-row { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px; }
+  .record-card .rc-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+  .record-card .rc-text { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+  /* ── RECORD DETAIL MODAL ── */
+  #record-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; padding: 1rem;
+  }
+  #record-modal-overlay.hidden { display: none; }
+  .record-modal-box {
+    background: #1a2d5a; border: 1px solid var(--card-border);
+    border-radius: 20px; padding: 1.8rem; max-width: 520px; width: 100%;
+    max-height: 85vh; overflow-y: auto;
+  }
+  .record-modal-box .rm-date { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
+  .record-modal-box .rm-topic { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.2rem; }
+  .record-modal-box .rm-section { margin-bottom: 1rem; padding: 0.9rem 1rem;
+    background: var(--card-bg); border-radius: 12px; }
+  .record-modal-box .rm-label { font-size: 0.78rem; margin-bottom: 5px; font-weight: 600; }
+  .record-modal-box .rm-content { font-size: 0.95rem; line-height: 1.6; }
+
   @media (max-width: 480px) {
     .grid-2 { grid-template-columns: 1fr; }
   }
 </style>
 </head>
 <body>
+
+<!-- ══════════ RECORD DETAIL MODAL ══════════ -->
+<div id="record-modal-overlay" class="hidden">
+  <div class="record-modal-box">
+    <div class="rm-date" id="rm-date"></div>
+    <div class="rm-topic" id="rm-topic"></div>
+    <div class="rm-section">
+      <div class="rm-label" style="color:var(--star-blue)">★ 별 하나 — 알게 된 점</div>
+      <div class="rm-content" id="rm-star1"></div>
+    </div>
+    <div class="rm-section">
+      <div class="rm-label" style="color:var(--star-yellow)">★ 별 둘 — 느낀 점</div>
+      <div class="rm-content" id="rm-star2"></div>
+    </div>
+    <div class="rm-section">
+      <div class="rm-label" style="color:var(--heart-pink)">♥ 소망 하나</div>
+      <div class="rm-content" id="rm-wish"></div>
+    </div>
+    <div class="mt-md">
+      <button class="btn btn-ghost" onclick="closeRecordModal()">닫기</button>
+    </div>
+  </div>
+</div>
 
 <div id="stars-bg"></div>
 
@@ -230,19 +294,50 @@
 </div>
 
 <div id="app">
- <header>
-  <h1>해빛 투게더 <span style="font-size:1.1rem;font-weight:400;color:var(--text-muted)">"</span><span class="s1">별</span> <span class="s2">둘</span><span style="font-size:1.1rem;font-weight:400;color:var(--text-muted)">,</span> <span class="heart">소망 하나</span><span style="font-size:1.1rem;font-weight:400;color:var(--text-muted)">"</span></h1>
-  <div style="margin-top:0.8rem;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">
-    <button onclick="showPublicSky()" style="padding:6px 16px;border-radius:999px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#9ca3c8;font-size:0.82rem;cursor:pointer">🌌 오늘의 하늘</button>
-    <button onclick="showPublicCollect()" style="padding:6px 16px;border-radius:999px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#9ca3c8;font-size:0.82rem;cursor:pointer">📚 모아보기</button>
-    <div id="user-badge-wrap" style="display:none">
-      <span class="user-badge" onclick="logout()">
-        <span id="badge-name">-</span>
-        <span style="color:var(--text-muted);font-size:0.75rem">로그아웃</span>
-      </span>
+  <header>
+    <h1>해빛 투게더 <span style="font-size:1.1rem;font-weight:400;color:var(--text-muted)">"</span><span class="s1">별</span> <span class="s2">둘</span><span style="font-size:1.1rem;font-weight:400;color:var(--text-muted)">,</span> <span class="heart">소망 하나</span><span style="font-size:1.1rem;font-weight:400;color:var(--text-muted)">"</span></h1>
+    <div style="margin-top:0.8rem;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">
+      <button class="pub-tab" onclick="showPublicTab('pub-sky')">🌌 오늘의 하늘</button>
+      <button class="pub-tab" onclick="showPublicTab('pub-collect')">📚 모아보기</button>
+      <div id="user-badge-wrap" style="display:none">
+        <span class="user-badge" onclick="logout()">
+          <span id="badge-name">-</span>
+          <span style="color:var(--text-muted);font-size:0.75rem">로그아웃</span>
+        </span>
+      </div>
     </div>
+  </header>
+
+  <!-- ══ PUBLIC SKY ══ -->
+  <div id="screen-pub-sky" class="screen">
+    <div class="card">
+      <div class="reflect-section">
+        <label>날짜 선택</label>
+        <input type="date" id="pub-sky-date">
+      </div>
+    </div>
+    <div class="mt-sm">
+      <div id="pub-sky-canvas-wrap" style="background:linear-gradient(180deg,#050d1f 0%,#0f1f4a 50%,#1a3580 100%);border-radius:16px;padding:1.5rem;min-height:220px;position:relative;overflow:hidden">
+        <div class="sky-date-label" id="pub-sky-date-label">날짜를 선택하면 하늘이 펼쳐집니다 ✨</div>
+        <div id="pub-sky-items" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:0.5rem"></div>
+      </div>
+    </div>
+    <div class="mt-md"><button class="btn btn-ghost" onclick="closePublicTab()">← 돌아가기</button></div>
   </div>
-</header>
+
+  <!-- ══ PUBLIC COLLECT ══ -->
+  <div id="screen-pub-collect" class="screen">
+    <div class="card">
+      <div class="reflect-section">
+        <label>학습 문제</label>
+        <select id="pub-collect-topic">
+          <option value="">-- 학습 문제를 선택하세요 --</option>
+        </select>
+      </div>
+    </div>
+    <div class="mt-sm" id="pub-collect-result"></div>
+    <div class="mt-md"><button class="btn btn-ghost" onclick="closePublicTab()">← 돌아가기</button></div>
+  </div>
 
   <!-- ══ LOGIN SCREEN ══ -->
   <div id="screen-login" class="screen active">
@@ -270,6 +365,7 @@
       <button class="tab active" data-tab="write" onclick="switchTab(this,'write')">✏️ 성찰 쓰기</button>
       <button class="tab" data-tab="sky" onclick="switchTab(this,'sky')">🌌 오늘의 하늘</button>
       <button class="tab" data-tab="collect" onclick="switchTab(this,'collect')">📚 모아보기</button>
+      <button class="tab" data-tab="myrecord" onclick="switchTab(this,'myrecord')">📖 나의 성찰 기록</button>
     </div>
 
     <!-- WRITE TAB -->
@@ -298,7 +394,7 @@
         </div>
         <div class="msg" id="write-msg"></div>
         <div class="mt-md flex gap-sm">
-          <button class="btn btn-primary" onclick="submitReflection()">별에 담기 🌟</button>
+          <button class="btn btn-primary" onclick="submitReflection()">하늘에 달기 🌟</button>
         </div>
       </div>
     </div>
@@ -330,6 +426,11 @@
         </div>
       </div>
       <div class="mt-sm" id="collect-result"></div>
+    </div>
+
+    <!-- MY RECORD TAB -->
+    <div id="tab-myrecord" class="tab-content" style="display:none">
+      <div id="myrecord-list"></div>
     </div>
   </div>
 
@@ -424,8 +525,8 @@
 //  CONFIGURATION — Supabase 설정
 // ══════════════════════════════════════════
 const SUPABASE_URL = 'https://teidrljncdiufiywyski.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlaWRybGpuY2RpdWZpeXd5c2tpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMTUwODksImV4cCI6MjA5NjY5MTA4OX0.600tQ3P97Y7isjqJav2_w1Geb7Z6nF72GIQQfMvyKaQ';
-const ADMIN_PW = '0909'; 
+const SUPABASE_KEY = 'sb_publishable_FYkuwWL91pi5PaD2-AmOUg_EGxLwpfQ';
+const ADMIN_PW = '0909';                        // ← 관리자 비밀번호
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -457,6 +558,117 @@ function createStarsBg() {
     bg.appendChild(s);
   }
 }
+
+// ══════════════════════════════════════════
+//  PUBLIC TABS (로그인 없이 접근)
+// ══════════════════════════════════════════
+let prevScreen = 'login';
+
+async function showPublicTab(tab) {
+  // 현재 어떤 화면인지 기억
+  const active = document.querySelector('.screen.active');
+  if (active) prevScreen = active.id.replace('screen-','');
+
+  if (tab === 'pub-sky') {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('pub-sky-date').value = today;
+    showScreen('pub-sky');
+    loadPubSkyView();
+  } else {
+    showScreen('pub-collect');
+    loadPubCollectTopics();
+  }
+}
+
+function closePublicTab() {
+  showScreen(prevScreen || 'login');
+}
+
+async function loadPubSkyView() {
+  const date = document.getElementById('pub-sky-date').value;
+  document.getElementById('pub-sky-date-label').textContent = `${date} 하늘 ✨`;
+  const { data } = await sb.from('reflections').select('*, students(name)').eq('date', date);
+  const container = document.getElementById('pub-sky-items');
+  container.innerHTML = '';
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:2rem;width:100%">이 날의 성찰 일지가 없습니다.</div>'; return;
+  }
+  data.forEach(r => {
+    const name = r.students?.name || '학생';
+    const s1 = document.createElement('div'); s1.className = 'sky-item';
+    s1.innerHTML = `<span class="icon" style="color:var(--star-blue);animation-delay:${Math.random()*2}s">★</span><span class="name">${name}</span>`;
+    s1.onclick = () => openModal(`${name} — 별 하나`, [{ label: '알게 된 점', text: r.star1 }]);
+    const s2 = document.createElement('div'); s2.className = 'sky-item';
+    s2.innerHTML = `<span class="icon" style="color:var(--star-yellow);animation-delay:${Math.random()*2}s">★</span><span class="name">${name}</span>`;
+    s2.onclick = () => openModal(`${name} — 별 둘`, [{ label: '느낀 점', text: r.star2 }]);
+    const h = document.createElement('div'); h.className = 'sky-item';
+    h.innerHTML = `<span class="icon" style="color:var(--heart-pink);animation-delay:${Math.random()*2}s">♥</span><span class="name">${name}</span>`;
+    h.onclick = () => openModal(`${name} — 소망`, [{ label: '소망', text: r.wish }]);
+    container.appendChild(s1); container.appendChild(s2); container.appendChild(h);
+  });
+}
+
+async function loadPubCollectTopics() {
+  const { data } = await sb.from('topics').select('*').order('created_at', { ascending: false });
+  const sel = document.getElementById('pub-collect-topic');
+  sel.innerHTML = '<option value="">-- 학습 문제를 선택하세요 --</option>';
+  (data || []).forEach(t => {
+    const o = document.createElement('option');
+    o.value = t.id; o.textContent = `[${t.date}] ${t.title}`;
+    sel.appendChild(o);
+  });
+}
+
+document.addEventListener('change', async e => {
+  // 공개 하늘
+  if (e.target.id === 'pub-sky-date') { loadPubSkyView(); return; }
+  // 공개 모아보기
+  if (e.target.id === 'pub-collect-topic') {
+    const topic_id = e.target.value;
+    const result = document.getElementById('pub-collect-result');
+    if (!topic_id) { result.innerHTML = ''; return; }
+    const { data } = await sb.from('reflections').select('*, students(name)').eq('topic_id', topic_id).order('created_at');
+    result.innerHTML = '';
+    if (!data || data.length === 0) { result.innerHTML = '<div class="empty-state">아직 성찰 일지가 없습니다.</div>'; return; }
+    const tabWrap = document.createElement('div');
+    tabWrap.innerHTML = `
+      <div class="c-tabs">
+        <button class="c-tab active blue" onclick="switchCollect(this,'pc1')">★ 별 하나</button>
+        <button class="c-tab" onclick="switchCollect(this,'pc2')">★ 별 둘</button>
+        <button class="c-tab" onclick="switchCollect(this,'pc3')">♥ 소망</button>
+      </div>
+      <div id="pc1">${data.map(r=>`<div class="c-entry"><span class="icon" style="color:var(--star-blue)">★</span><div><div class="c-name">${r.students?.name}</div><div class="c-text">${r.star1||'-'}</div></div></div>`).join('')}</div>
+      <div id="pc2" style="display:none">${data.map(r=>`<div class="c-entry"><span class="icon" style="color:var(--star-yellow)">★</span><div><div class="c-name">${r.students?.name}</div><div class="c-text">${r.star2||'-'}</div></div></div>`).join('')}</div>
+      <div id="pc3" style="display:none">${data.map(r=>`<div class="c-entry"><span class="icon" style="color:var(--heart-pink)">♥</span><div><div class="c-name">${r.students?.name}</div><div class="c-text">${r.wish||'-'}</div></div></div>`).join('')}</div>
+    `;
+    result.appendChild(tabWrap);
+    return;
+  }
+  // 로그인 후 하늘
+  if (e.target.id === 'sky-date') { loadSkyView(); return; }
+  // 로그인 후 모아보기
+  if (e.target.id === 'collect-topic') {
+    const topic_id = e.target.value;
+    const result = document.getElementById('collect-result');
+    if (!topic_id) { result.innerHTML = ''; return; }
+    const { data } = await sb.from('reflections').select('*, students(name)').eq('topic_id', topic_id).order('created_at');
+    result.innerHTML = '';
+    if (!data || data.length === 0) { result.innerHTML = '<div class="empty-state">아직 성찰 일지가 없습니다.</div>'; return; }
+    const tabWrap = document.createElement('div');
+    tabWrap.innerHTML = `
+      <div class="c-tabs">
+        <button class="c-tab active blue" onclick="switchCollect(this,'c1')">★ 별 하나</button>
+        <button class="c-tab" onclick="switchCollect(this,'c2')">★ 별 둘</button>
+        <button class="c-tab" onclick="switchCollect(this,'c3')">♥ 소망</button>
+      </div>
+      <div id="c1">${data.map(r => `<div class="c-entry"><span class="icon" style="color:var(--star-blue)">★</span><div><div class="c-name">${r.students?.name}</div><div class="c-text">${r.star1 || '-'}</div></div></div>`).join('')}</div>
+      <div id="c2" style="display:none">${data.map(r => `<div class="c-entry"><span class="icon" style="color:var(--star-yellow)">★</span><div><div class="c-name">${r.students?.name}</div><div class="c-text">${r.star2 || '-'}</div></div></div>`).join('')}</div>
+      <div id="c3" style="display:none">${data.map(r => `<div class="c-entry"><span class="icon" style="color:var(--heart-pink)">♥</span><div><div class="c-name">${r.students?.name}</div><div class="c-text">${r.wish || '-'}</div></div></div>`).join('')}</div>
+    `;
+    result.appendChild(tabWrap);
+    return;
+  }
+});
 
 // ══════════════════════════════════════════
 //  AUTH
@@ -522,6 +734,7 @@ function switchTab(btn, tabId) {
 
   if (tabId === 'sky') loadSkyView();
   if (tabId === 'collect') loadCollectTopics();
+  if (tabId === 'myrecord') loadMyRecord();
   if (tabId === 'a-entries') loadAdminTopicFilter();
 }
 
@@ -683,9 +896,6 @@ async function loadSkyView() {
   });
 }
 
-document.addEventListener('change', e => {
-  if (e.target.id === 'sky-date') loadSkyView();
-});
 
 // ══════════════════════════════════════════
 //  COLLECT VIEW
@@ -701,44 +911,19 @@ async function loadCollectTopics() {
   });
 }
 
-document.addEventListener('change', async e => {
-  if (e.target.id !== 'collect-topic') return;
-  const topic_id = e.target.value;
-  const result = document.getElementById('collect-result');
-  if (!topic_id) { result.innerHTML = ''; return; }
-
-  const { data } = await sb.from('reflections')
-    .select('*, students(name)').eq('topic_id', topic_id).order('created_at');
-
-  result.innerHTML = '';
-  if (!data || data.length === 0) {
-    result.innerHTML = '<div class="empty-state">아직 성찰 일지가 없습니다.</div>'; return;
-  }
-
-  // Build 3 tabs
-  const tabWrap = document.createElement('div');
-  tabWrap.innerHTML = `
-    <div class="c-tabs">
-      <button class="c-tab active blue" onclick="switchCollect(this,'c1')">★ 별 하나</button>
-      <button class="c-tab" onclick="switchCollect(this,'c2')">★ 별 둘</button>
-      <button class="c-tab" onclick="switchCollect(this,'c3')">♥ 소망</button>
-    </div>
-    <div id="c1">${data.map(r => `<div class="c-entry"><span class="icon" style="color:var(--star-blue)">★</span><div><div class="c-name">${r.students?.name}</div><div class="c-text">${r.star1 || '-'}</div></div></div>`).join('')}</div>
-    <div id="c2" style="display:none">${data.map(r => `<div class="c-entry"><span class="icon" style="color:var(--star-yellow)">★</span><div><div class="c-name">${r.students?.name}</div><div class="c-text">${r.star2 || '-'}</div></div></div>`).join('')}</div>
-    <div id="c3" style="display:none">${data.map(r => `<div class="c-entry"><span class="icon" style="color:var(--heart-pink)">♥</span><div><div class="c-name">${r.students?.name}</div><div class="c-text">${r.wish || '-'}</div></div></div>`).join('')}</div>
-  `;
-  result.appendChild(tabWrap);
-});
 
 function switchCollect(btn, id) {
   btn.parentElement.querySelectorAll('.c-tab').forEach(t => {
     t.classList.remove('active','blue','yellow','pink');
   });
+  const base = id.replace(/^pc/, 'c'); // pc1→c1, pc2→c2 등 정규화
   const colors = { c1: 'blue', c2: 'yellow', c3: 'pink' };
-  btn.classList.add('active', colors[id]);
-  ['c1','c2','c3'].forEach(cid => {
-    const el = document.getElementById(cid);
-    if (el) el.style.display = cid === id ? 'block' : 'none';
+  btn.classList.add('active', colors[base]);
+  // 같은 부모 안에서만 탭 전환 (pc1/pc2/pc3 또는 c1/c2/c3)
+  const prefix = id.startsWith('pc') ? 'pc' : 'c';
+  ['1','2','3'].forEach(n => {
+    const el = document.getElementById(prefix + n);
+    if (el) el.style.display = (prefix + n) === id ? 'block' : 'none';
   });
 }
 
@@ -819,6 +1004,55 @@ document.getElementById('modal-overlay').addEventListener('click', e => {
 });
 
 // ══════════════════════════════════════════
+//  MY RECORD
+// ══════════════════════════════════════════
+async function loadMyRecord() {
+  const list = document.getElementById('myrecord-list');
+  list.innerHTML = '<div class="empty-state">불러오는 중...</div>';
+
+  const { data } = await sb.from('reflections')
+    .select('*, topics(title, date)')
+    .eq('student_id', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  list.innerHTML = '';
+  if (!data || data.length === 0) {
+    list.innerHTML = '<div class="empty-state">아직 작성한 성찰 일지가 없어요.</div>'; return;
+  }
+
+  data.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'record-card';
+    card.innerHTML = `
+      <div class="rc-date">${r.date} &nbsp;·&nbsp; ${r.topics?.date || ''}</div>
+      <div class="rc-topic">📌 ${r.topics?.title || '학습 문제 없음'}</div>
+      <div class="rc-row"><span class="rc-icon" style="color:var(--star-blue)">★</span><div class="rc-text">${r.star1 || '-'}</div></div>
+      <div class="rc-row"><span class="rc-icon" style="color:var(--star-yellow)">★</span><div class="rc-text">${r.star2 || '-'}</div></div>
+      <div class="rc-row"><span class="rc-icon" style="color:var(--heart-pink)">♥</span><div class="rc-text">${r.wish || '-'}</div></div>
+    `;
+    card.onclick = () => openRecordModal(r);
+    list.appendChild(card);
+  });
+}
+
+function openRecordModal(r) {
+  document.getElementById('rm-date').textContent = r.date;
+  document.getElementById('rm-topic').textContent = '📌 ' + (r.topics?.title || '학습 문제 없음');
+  document.getElementById('rm-star1').textContent = r.star1 || '-';
+  document.getElementById('rm-star2').textContent = r.star2 || '-';
+  document.getElementById('rm-wish').textContent = r.wish || '-';
+  document.getElementById('record-modal-overlay').classList.remove('hidden');
+}
+
+function closeRecordModal() {
+  document.getElementById('record-modal-overlay').classList.add('hidden');
+}
+
+document.addEventListener('click', e => {
+  if (e.target === document.getElementById('record-modal-overlay')) closeRecordModal();
+});
+
+// ══════════════════════════════════════════
 //  UTILS
 // ══════════════════════════════════════════
 function showMsg(id, text, type) {
@@ -826,26 +1060,6 @@ function showMsg(id, text, type) {
   el.textContent = text; el.className = 'msg ' + type + ' show';
   setTimeout(() => el.classList.remove('show'), 3500);
 }
-function showPublicSky() {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-student').classList.add('active');
-  // sky 탭으로 강제 이동
-  document.querySelectorAll('#screen-student .tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('#screen-student .tab-content').forEach(c => c.style.display = 'none');
-  document.querySelector('#screen-student .tab[data-tab="sky"]').classList.add('active');
-  document.getElementById('tab-sky').style.display = 'block';
-  loadSkyView();
-}
-
-function showPublicCollect() {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-student').classList.add('active');
-  document.querySelectorAll('#screen-student .tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('#screen-student .tab-content').forEach(c => c.style.display = 'none');
-  document.querySelector('#screen-student .tab[data-tab="collect"]').classList.add('active');
-  document.getElementById('tab-collect').style.display = 'block';
-  loadCollectTopics();
-}  
 </script>
 </body>
 </html>
