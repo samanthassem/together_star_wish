@@ -230,15 +230,19 @@
 </div>
 
 <div id="app">
-  <header>
-    <h1>해빛 투게더 <span style="font-size:1.1rem;font-weight:400;color:var(--text-muted)">"</span><span class="s1">별</span> <span class="s2">둘</span><span style="font-size:1.1rem;font-weight:400;color:var(--text-muted)">,</span> <span class="heart">소망 하나</span><span style="font-size:1.1rem;font-weight:400;color:var(--text-muted)">"</span></h1>
+ <header>
+  <h1>해빛 투게더 <span style="font-size:1.1rem;font-weight:400;color:var(--text-muted)">"</span><span class="s1">별</span> <span class="s2">둘</span><span style="font-size:1.1rem;font-weight:400;color:var(--text-muted)">,</span> <span class="heart">소망 하나</span><span style="font-size:1.1rem;font-weight:400;color:var(--text-muted)">"</span></h1>
+  <div style="margin-top:0.8rem;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">
+    <button onclick="showPublicSky()" style="padding:6px 16px;border-radius:999px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#9ca3c8;font-size:0.82rem;cursor:pointer">🌌 오늘의 하늘</button>
+    <button onclick="showPublicCollect()" style="padding:6px 16px;border-radius:999px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.07);color:#9ca3c8;font-size:0.82rem;cursor:pointer">📚 모아보기</button>
     <div id="user-badge-wrap" style="display:none">
       <span class="user-badge" onclick="logout()">
         <span id="badge-name">-</span>
         <span style="color:var(--text-muted);font-size:0.75rem">로그아웃</span>
       </span>
     </div>
-  </header>
+  </div>
+</header>
 
   <!-- ══ LOGIN SCREEN ══ -->
   <div id="screen-login" class="screen active">
@@ -822,6 +826,26 @@ function showMsg(id, text, type) {
   el.textContent = text; el.className = 'msg ' + type + ' show';
   setTimeout(() => el.classList.remove('show'), 3500);
 }
+function showPublicSky() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-student').classList.add('active');
+  // sky 탭으로 강제 이동
+  document.querySelectorAll('#screen-student .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#screen-student .tab-content').forEach(c => c.style.display = 'none');
+  document.querySelector('#screen-student .tab[data-tab="sky"]').classList.add('active');
+  document.getElementById('tab-sky').style.display = 'block';
+  loadSkyView();
+}
+
+function showPublicCollect() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-student').classList.add('active');
+  document.querySelectorAll('#screen-student .tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#screen-student .tab-content').forEach(c => c.style.display = 'none');
+  document.querySelector('#screen-student .tab[data-tab="collect"]').classList.add('active');
+  document.getElementById('tab-collect').style.display = 'block';
+  loadCollectTopics();
+}  
 </script>
 </body>
 </html>
