@@ -454,6 +454,7 @@
       <button class="tab active" data-tab="a-topics" onclick="switchTab(this,'a-topics')">📋 학습 문제</button>
       <button class="tab" data-tab="a-students" onclick="switchTab(this,'a-students')">👥 학생 관리</button>
       <button class="tab" data-tab="a-entries" onclick="switchTab(this,'a-entries')">📝 성찰 관리</button>
+      <button class="tab" data-tab="a-record" onclick="switchTab(this,'a-record')">📖 학생 성찰 기록</button>
     </div>
 
     <!-- ADMIN: TOPICS -->
@@ -530,6 +531,29 @@
         </div>
       </div>
       <div id="admin-entries-list" class="mt-sm"></div>
+    </div>
+
+    <!-- ADMIN: 학생 성찰 기록 -->
+    <div id="tab-a-record" class="tab-content" style="display:none">
+      <div class="card admin-section">
+        <label>학생 선택</label>
+        <select id="admin-student-select" onchange="loadAdminStudentRecord()">
+          <option value="">-- 학생을 선택하세요 --</option>
+        </select>
+      </div>
+      <div id="admin-student-record-list" class="mt-sm"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 수정 모달 ══ -->
+<div id="edit-modal-overlay" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:300;padding:1rem">
+  <div style="background:#1a2d5a;border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:1.8rem;max-width:500px;width:100%;max-height:85vh;overflow-y:auto">
+    <h3 id="edit-modal-title" style="margin-bottom:1.2rem;font-size:1.1rem"></h3>
+    <div id="edit-modal-fields"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem">
+      <button class="btn btn-primary" onclick="saveEdit()">저장</button>
+      <button class="btn btn-ghost" onclick="closeEditModal()">취소</button>
     </div>
   </div>
 </div>
@@ -761,6 +785,7 @@ function switchTab(btn, tabId) {
   if (tabId === 'collect') loadCollectTopics();
   if (tabId === 'myrecord') loadMyRecord();
   if (tabId === 'a-entries') loadAdminTopicFilter();
+  if (tabId === 'a-record') loadAdminStudentSelect();
 }
 
 // ══════════════════════════════════════════
@@ -788,7 +813,10 @@ async function loadAdminTopics() {
     const div = document.createElement('div');
     div.className = 'topic-item';
     div.innerHTML = `<span>${t.date} — ${t.title}</span>
-      <button class="btn btn-danger" style="padding:5px 12px;font-size:0.8rem" onclick="deleteTopic('${t.id}')">삭제</button>`;
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost" style="padding:5px 12px;font-size:0.8rem" onclick="editTopic('${t.id}','${t.title}','${t.date}')">수정</button>
+        <button class="btn btn-danger" style="padding:5px 12px;font-size:0.8rem" onclick="deleteTopic('${t.id}')">삭제</button>
+      </div>`;
     list.appendChild(div);
   });
 }
@@ -839,7 +867,10 @@ async function loadAdminStudents() {
     const div = document.createElement('div');
     div.className = 'student-row';
     div.innerHTML = `<span>${s.name}</span><span style="color:var(--text-muted)">${s.password}</span>
-      <button class="btn btn-danger" style="padding:5px 10px;font-size:0.78rem" onclick="deleteStudent('${s.id}')">삭제</button>`;
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-ghost" style="padding:5px 10px;font-size:0.78rem" onclick="editStudent('${s.id}','${s.name}','${s.password}')">수정</button>
+        <button class="btn btn-danger" style="padding:5px 10px;font-size:0.78rem" onclick="deleteStudent('${s.id}')">삭제</button>
+      </div>`;
     list.appendChild(div);
   });
 }
@@ -1030,6 +1061,7 @@ async function loadAdminEntries() {
           <strong>${r.students?.name || '-'}</strong>
           <span class="text-muted" style="margin-left:8px">${r.topics?.title || '-'} · ${r.date}</span>
         </div>
+        <button class="btn btn-ghost" style="padding:5px 12px;font-size:0.8rem" onclick="editEntry('${r.id}',\`${(r.star1||'').replace(/`/g,"'")}\`,\`${(r.star2||'').replace(/`/g,"'")}\`,\`${(r.wish||'').replace(/`/g,"'")}\`)">수정</button>
         <button class="btn btn-danger" style="padding:5px 12px;font-size:0.8rem" onclick="deleteEntry('${r.id}', this)">삭제</button>
       </div>
       <div style="display:grid;gap:6px">
@@ -1066,6 +1098,128 @@ document.getElementById('modal-overlay').addEventListener('click', e => {
 });
 
 // ══════════════════════════════════════════
+//  EDIT MODAL
+// ══════════════════════════════════════════
+let editState = {}; // { type, id, ... }
+
+function openEditModal(title, fields) {
+  document.getElementById('edit-modal-title').textContent = title;
+  document.getElementById('edit-modal-fields').innerHTML = fields.map(f => `
+    <div class="reflect-section">
+      <label>${f.label}</label>
+      ${f.type === 'textarea'
+        ? `<textarea id="ef-${f.key}" style="min-height:70px">${f.value}</textarea>`
+        : `<input id="ef-${f.key}" type="${f.type||'text'}" value="${f.value}">`}
+    </div>
+  `).join('');
+  document.getElementById('edit-modal-overlay').classList.remove('hidden');
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal-overlay').classList.add('hidden');
+  editState = {};
+}
+
+document.addEventListener('click', e => {
+  if (e.target === document.getElementById('edit-modal-overlay')) closeEditModal();
+});
+
+async function saveEdit() {
+  if (editState.type === 'topic') {
+    const title = document.getElementById('ef-title').value.trim();
+    const date = document.getElementById('ef-date').value;
+    if (!title) return;
+    await sb.from('topics').update({ title, date }).eq('id', editState.id);
+    closeEditModal(); loadAdminTopics();
+
+  } else if (editState.type === 'student') {
+    const name = document.getElementById('ef-name').value.trim();
+    const password = document.getElementById('ef-password').value.trim();
+    if (!name) return;
+    await sb.from('students').update({ name, password }).eq('id', editState.id);
+    closeEditModal(); loadAdminStudents();
+
+  } else if (editState.type === 'entry') {
+    const star1 = document.getElementById('ef-star1').value.trim();
+    const star2 = document.getElementById('ef-star2').value.trim();
+    const wish = document.getElementById('ef-wish').value.trim();
+    await sb.from('reflections').update({ star1, star2, wish }).eq('id', editState.id);
+    closeEditModal(); loadAdminEntries();
+  }
+}
+
+function editTopic(id, title, date) {
+  editState = { type: 'topic', id };
+  openEditModal('학습 문제 수정', [
+    { key: 'title', label: '학습 문제', value: title },
+    { key: 'date', label: '날짜', type: 'date', value: date }
+  ]);
+}
+
+function editStudent(id, name, password) {
+  editState = { type: 'student', id };
+  openEditModal('학생 정보 수정', [
+    { key: 'name', label: '이름', value: name },
+    { key: 'password', label: '비밀번호', value: password }
+  ]);
+}
+
+function editEntry(id, star1, star2, wish) {
+  editState = { type: 'entry', id };
+  openEditModal('성찰 일지 수정', [
+    { key: 'star1', label: '★ 별 하나 — 알게 된 점', type: 'textarea', value: star1 },
+    { key: 'star2', label: '★ 별 둘 — 느낀 점', type: 'textarea', value: star2 },
+    { key: 'wish', label: '♥ 소망 하나', type: 'textarea', value: wish }
+  ]);
+}
+
+// ══════════════════════════════════════════
+//  ADMIN: 학생 성찰 기록
+// ══════════════════════════════════════════
+async function loadAdminStudentSelect() {
+  const { data } = await sb.from('students').select('*').order('name');
+  const sel = document.getElementById('admin-student-select');
+  sel.innerHTML = '<option value="">-- 학생을 선택하세요 --</option>';
+  (data || []).forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.id; o.textContent = s.name;
+    sel.appendChild(o);
+  });
+}
+
+async function loadAdminStudentRecord() {
+  const student_id = document.getElementById('admin-student-select').value;
+  const list = document.getElementById('admin-student-record-list');
+  if (!student_id) { list.innerHTML = ''; return; }
+
+  list.innerHTML = '<div class="empty-state">불러오는 중...</div>';
+  const { data } = await sb.from('reflections')
+    .select('*, topics(title, date)')
+    .eq('student_id', student_id);
+
+  list.innerHTML = '';
+  if (!data || data.length === 0) {
+    list.innerHTML = '<div class="empty-state">이 학생의 성찰 일지가 없습니다.</div>'; return;
+  }
+
+  data.sort((a, b) => (b.topics?.date||'').localeCompare(a.topics?.date||''));
+
+  data.forEach(r => {
+    const card = document.createElement('div');
+    card.className = 'record-card';
+    card.innerHTML = `
+      <div class="rc-date">${r.topics?.date || ''}</div>
+      <div class="rc-topic">📌 ${r.topics?.title || '학습 문제 없음'}</div>
+      <div class="rc-row"><span class="rc-icon" style="color:var(--star-blue)">★</span><div class="rc-text">${r.star1||'-'}</div></div>
+      <div class="rc-row"><span class="rc-icon" style="color:var(--star-yellow)">★</span><div class="rc-text">${r.star2||'-'}</div></div>
+      <div class="rc-row"><span class="rc-icon" style="color:var(--heart-pink)">♥</span><div class="rc-text">${r.wish||'-'}</div></div>
+    `;
+    card.onclick = () => openRecordModal(r);
+    list.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════
 //  MY RECORD
 // ══════════════════════════════════════════
 async function loadMyRecord() {
@@ -1092,7 +1246,7 @@ async function loadMyRecord() {
     const card = document.createElement('div');
     card.className = 'record-card';
     card.innerHTML = `
-      <div class="rc-date">${r.date} &nbsp;·&nbsp; ${r.topics?.date || ''}</div>
+      <div class="rc-date">${r.topics?.date || ''}</div>
       <div class="rc-topic">📌 ${r.topics?.title || '학습 문제 없음'}</div>
       <div class="rc-row"><span class="rc-icon" style="color:var(--star-blue)">★</span><div class="rc-text">${r.star1 || '-'}</div></div>
       <div class="rc-row"><span class="rc-icon" style="color:var(--star-yellow)">★</span><div class="rc-text">${r.star2 || '-'}</div></div>
@@ -1104,7 +1258,7 @@ async function loadMyRecord() {
 }
 
 function openRecordModal(r) {
-  document.getElementById('rm-date').textContent = r.date;
+  document.getElementById('rm-date').textContent = r.topics?.date || r.date;
   document.getElementById('rm-topic').textContent = '📌 ' + (r.topics?.title || '학습 문제 없음');
   document.getElementById('rm-star1').textContent = r.star1 || '-';
   document.getElementById('rm-star2').textContent = r.star2 || '-';
