@@ -618,7 +618,7 @@ async function loadPubSkyView() {
 }
 
 async function loadPubCollectTopics() {
-  const { data } = await sb.from('topics').select('*').order('created_at', { ascending: false });
+  const { data } = await sb.from('topics').select('*').order('date', { ascending: false });
   const sel = document.getElementById('pub-collect-topic');
   sel.innerHTML = '<option value="">-- 학습 문제를 선택하세요 --</option>';
   (data || []).forEach(t => {
@@ -762,7 +762,7 @@ async function loadTopics() {
 }
 
 async function loadAdminTopics() {
-  const { data } = await sb.from('topics').select('*').order('created_at', { ascending: false });
+  const { data } = await sb.from('topics').select('*').order('date', { ascending: false });
   const list = document.getElementById('topic-list');
   list.innerHTML = '';
   if (!data || data.length === 0) {
@@ -910,7 +910,7 @@ async function loadSkyView() {
 //  COLLECT VIEW
 // ══════════════════════════════════════════
 async function loadCollectTopics() {
-  const { data } = await sb.from('topics').select('*').order('created_at', { ascending: false });
+  const { data } = await sb.from('topics').select('*').order('date', { ascending: false });
   const sel = document.getElementById('collect-topic');
   sel.innerHTML = '<option value="">-- 학습 문제를 선택하세요 --</option>';
   (data || []).forEach(t => {
@@ -940,7 +940,7 @@ function switchCollect(btn, id) {
 //  ADMIN ENTRIES
 // ══════════════════════════════════════════
 async function loadAdminTopicFilter() {
-  const { data } = await sb.from('topics').select('*').order('created_at', { ascending: false });
+  const { data } = await sb.from('topics').select('*').order('date', { ascending: false });
   const sel = document.getElementById('admin-topic-filter');
   sel.innerHTML = '<option value="">전체</option>';
   (data || []).forEach(t => {
